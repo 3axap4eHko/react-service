@@ -6,7 +6,7 @@
 
 ## Usage
 
-// User.jsx
+User.jsx
 ``` javascript
 import React, { Component } from 'react';
 import { provider } from 'react-service';
@@ -30,7 +30,8 @@ function providerMapper(props) {
 export default provider(providerMapper)(User);
 
 ```
-App.jsx
+
+Usage in a simple application
 ``` javascript
 import React, { Component } from 'react';
 import User from './User';
@@ -47,6 +48,34 @@ class App extends Component {
         return <User money={this.state.money} service={this.service} />
     }
 }
+
+export default App;
+
+```
+
+Usage in a redux application
+``` javascript
+import React, { Component } from 'react';
+import { connect } from 'react-redux';
+import User from './User';
+import { loadMoneyAction } from './redux/actions';
+
+class App extends Component {
+    render() {
+        const { userMoney, loadMoneyAction } = this.props;
+        return <User money={userMoney} service={loadMoneyAction} />
+    }
+}
+
+function mapStateToProps({ userMoney }) {
+    return { userMoney };
+}
+
+const mapDispatchToProps = {
+    loadMoneyAction,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
 
 ```
 
