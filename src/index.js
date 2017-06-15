@@ -42,4 +42,4 @@ export function provider(serviceOptions) {
 
     return ServiceProvider;
   };
-};
+}
