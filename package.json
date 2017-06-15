@@ -1,0 +1,53 @@
+{
+  "name": "react-service",
+  "version": "0.1.0",
+  "description": "React Service Component",
+  "main": "index.js",
+  "scripts": {
+    "build": "gulp",
+    "test": "karma start karma.conf.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/3axap4eHko/react-service.git"
+  },
+  "keywords": [
+    "react",
+    "service"
+  ],
+  "author": "Ivan (3axap4eHko)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/3axap4eHko/react-service/issues"
+  },
+  "homepage": "https://github.com/3axap4eHko/react-service#readme",
+  "devDependencies": {
+    "babel-loader": "^7.0.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-env": "^1.5.2",
+    "babel-preset-react": "^6.24.1",
+    "chai": "^4.0.2",
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-export": "^2.2.0",
+    "gulp-sourcemaps": "^2.6.0",
+    "karma": "^1.7.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^2.1.1",
+    "karma-cli": "^1.0.1",
+    "karma-coverage": "^1.1.1",
+    "karma-mocha": "^1.3.0",
+    "karma-mocha-reporter": "^2.2.3",
+    "karma-sourcemap-loader": "^0.3.7",
+    "karma-webpack": "^2.0.3",
+    "mocha": "^3.4.2",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1",
+    "webpack": "^2.6.1"
+  },
+  "dependencies": {
+    "prop-types": "^15.5.10"
+  }
+}
