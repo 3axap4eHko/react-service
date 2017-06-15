@@ -6,7 +6,7 @@
   "scripts": {
     "build": "gulp",
     "test": "karma start karma.conf.js",
-    "patch-release": ""
+    "patch-release": "npm version patch && gulp && git push && git push --tags && cd build && npm publish"
   },
   "repository": {
     "type": "git",
