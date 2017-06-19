@@ -6,25 +6,42 @@ export function provider(serviceOptions) {
 
     class ServiceProvider extends ReactComponent {
 
+      state = {
+        extraProps: {},
+      };
+
       componentWillMount() {
 
         const {
-                service     = () => {throw new Error('service is not defined');},
-                interval    = 0,
-                params      = {},
-                cancelToken = () => {},
+                service     = () => {throw new Error('service is not defined in ServiceProvider');},
+                interval    = null,
+                params,
                 onSuccess   = () => null,
                 onError     = e => console.error(e),
+                cancelToken = () => {},
               } = typeof serviceOptions === 'function' ? serviceOptions(this.props) : serviceOptions;
 
         const callback = () => new Promise(resolve => resolve(service(params)))
-          .then(onSuccess)
+          .then(extraProps => {
+            if (extraProps) {
+              switch(typeof extraProps) {
+                case 'function':
+                  this.setState({ extraProps: extraProps(this.props) });
+                  break;
+                case 'object':
+                  this.setState({ extraProps });
+                  break;
+              }
+            }
+            onSuccess(extraProps);
+          })
           .catch(onError);
 
         callback();
 
-        const timerId = interval ? setInterval(callback, interval) : 0;
+        const timerId = interval === null ? 0 : setInterval(callback, interval);
         this.cancelToken = () => clearInterval(timerId);
+
         cancelToken(this.cancelToken);
       }
 
@@ -33,7 +50,8 @@ export function provider(serviceOptions) {
       }
 
       render() {
-        return (<Component {...this.props} />);
+        const { extraProps } = this.state;
+        return (<Component {...this.props} {...extraProps} />);
       }
     }
 

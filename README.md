@@ -6,6 +6,8 @@
 
 ## Usage
 
+### Internally serviced component
+
 User.jsx
 ``` javascript
 import React, { Component } from 'react';
@@ -17,7 +19,32 @@ function User({ username, money }) {
     );
 }
 
-function providerMapper(props) {
+function providerOptions(props) {
+    return {
+        service: ({ id }) => ajax(`https://example.com/api/v1/user/${id}/balance`).then(money => ({ money }) ),
+        interval: 1000,
+        params: {
+            id: props.userId,
+        }
+    }
+}
+
+export default provider(providerOptions)(User);
+
+### Externally serviced component
+
+User.jsx
+``` javascript
+import React, { Component } from 'react';
+import { provider } from 'react-service';
+
+function User({ username, money }) {
+    return (
+        <div>{username}: {money}<div/>
+    );
+}
+
+function providerOptions(props) {
     return {
         service: props.service,
         interval: 1000,
@@ -27,7 +54,7 @@ function providerMapper(props) {
     }
 }
 
-export default provider(providerMapper)(User);
+export default provider(providerOptions)(User);
 
 ```
 

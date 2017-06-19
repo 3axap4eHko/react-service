@@ -42,7 +42,59 @@ describe('provider test suite', () => {
     });
   });
 
-  it('test service provider component render', done => {
+  it('test internal service provider component render', done => {
+    const id = `id_${Math.random()}`;
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    let counter = 0;
+
+    const ServiceTestComponent = provider(props => ({
+      service: () => ({ value: ++counter }),
+      onSuccess: () => {
+        const element = document.getElementById(id);
+        element.innerText.should.be.equal('1');
+        done();
+      },
+    }))(TestComponent);
+
+    render(<ServiceTestComponent
+      id={id}
+      value={0}
+    />, root);
+  });
+
+  it('test internal service provider interval component render', done => {
+    const id = `id_${Math.random()}`;
+    const context = {
+      counter: 0,
+      cancelToken() {}
+    };
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+
+    const ServiceTestComponent = provider(props => ({
+      service: () => ({ value: ++context.counter }),
+      interval: 100,
+      onSuccess: () => {
+        const element = document.getElementById(id);
+        element.innerText.should.be.equal(context.counter.toString());
+        if (context.counter >= 3) {
+          context.cancelToken();
+          done();
+        }
+      },
+      cancelToken: cancelToken => {
+        context.cancelToken = cancelToken;
+      }
+    }))(TestComponent);
+
+    render(<ServiceTestComponent
+      id={id}
+      value={0}
+    />, root);
+  });
+
+  it('test external service provider component render', done => {
     const id = `id_${Math.random()}`;
     const doneValue = 0;
     const root = document.createElement('div');
@@ -65,7 +117,7 @@ describe('provider test suite', () => {
       root);
   });
 
-  it('test service provider interval component render', done => {
+  it('test external service provider interval component render', done => {
     const id = `id_${Math.random()}`;
     const doneValue = 3;
     const root = document.createElement('div');
