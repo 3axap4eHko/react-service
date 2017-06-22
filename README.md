@@ -30,6 +30,7 @@ function providerOptions(props) {
 }
 
 export default provider(providerOptions)(User);
+```
 
 ### Externally serviced component
 
