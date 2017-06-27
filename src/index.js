@@ -23,7 +23,7 @@ export function provider(serviceOptions) {
 
         const callback = () => new Promise(resolve => resolve(service(params)))
           .then(extraProps => {
-            if (extraProps) {
+            if (extraProps && !this.canceled) {
               switch(typeof extraProps) {
                 case 'function':
                   this.setState({ extraProps: extraProps(this.props) });
@@ -40,7 +40,10 @@ export function provider(serviceOptions) {
         callback();
 
         const timerId = interval === null ? 0 : setInterval(callback, interval);
-        this.cancelToken = () => clearInterval(timerId);
+        this.cancelToken = () => {
+          this.canceled = true;
+          clearInterval(timerId);
+        };
 
         cancelToken(this.cancelToken);
       }
