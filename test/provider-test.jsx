@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { render } from 'react-dom';
-import { provider } from '../src/index';
+import { withService } from '../src/index';
 
 class TestComponent extends Component {
   render() {
@@ -28,7 +28,7 @@ class ServiceWrapper extends Component {
   }
 }
 
-describe('provider test suite', () => {
+describe('service provider test suite', () => {
 
   it('test component render', done => {
     const id = `id_${Math.random()}`;
@@ -48,14 +48,19 @@ describe('provider test suite', () => {
     document.body.appendChild(root);
     let counter = 0;
 
-    const ServiceTestComponent = provider(props => ({
-      service: () => ({ value: ++counter }),
-      onSuccess: () => {
+    const ServiceTestComponent = withService({
+      service() {
+        return ++counter;
+      },
+      mapToProps(result) {
+        return { value: result };
+      },
+      onSuccess() {
         const element = document.getElementById(id);
         element.innerText.should.be.equal('1');
         done();
       },
-    }))(TestComponent);
+    })(TestComponent);
 
     render(<ServiceTestComponent
       id={id}
@@ -67,15 +72,20 @@ describe('provider test suite', () => {
     const id = `id_${Math.random()}`;
     const context = {
       counter: 0,
-      cancelToken() {}
+      cancelToken() {},
     };
     const root = document.createElement('div');
     document.body.appendChild(root);
 
-    const ServiceTestComponent = provider(props => ({
-      service: () => ({ value: ++context.counter }),
+    const ServiceTestComponent = withService({
+      service(){
+        return ++context.counter;
+      },
+      mapToProps(result) {
+        return { value: result };
+      },
       interval: 100,
-      onSuccess: () => {
+      onSuccess() {
         const element = document.getElementById(id);
         element.innerText.should.be.equal(context.counter.toString());
         if (context.counter >= 3) {
@@ -85,8 +95,8 @@ describe('provider test suite', () => {
       },
       cancelToken: cancelToken => {
         context.cancelToken = cancelToken;
-      }
-    }))(TestComponent);
+      },
+    })(TestComponent);
 
     render(<ServiceTestComponent
       id={id}
@@ -100,9 +110,9 @@ describe('provider test suite', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
 
-    const ServiceTestComponent = provider(props => ({
-      service: props.service,
-    }))(TestComponent);
+    const ServiceTestComponent = withService({
+      service: props => props.service(),
+    })(TestComponent);
 
     render(<ServiceWrapper
         id={id}
@@ -123,10 +133,10 @@ describe('provider test suite', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
 
-    const ServiceTestComponent = provider(props => ({
-      service: props.service,
+    const ServiceTestComponent = withService({
+      service: props => props.service(),
       interval: 100,
-    }))(TestComponent);
+    })(TestComponent);
 
     render(<ServiceWrapper
         id={id}

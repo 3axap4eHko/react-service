@@ -11,7 +11,7 @@
 User.jsx
 ``` javascript
 import React, { Component } from 'react';
-import { provider } from 'react-service';
+import { withService } from 'react-service';
 
 function User({ username, money }) {
     return (
@@ -19,15 +19,11 @@ function User({ username, money }) {
     );
 }
 
-function providerOptions(props) {
-    return {
-        service: ({ id }) => ajax(`https://example.com/api/v1/user/${id}/balance`).then(money => ({ money }) ),
-        interval: 1000,
-        params: {
-            id: props.userId,
-        }
-    }
-}
+const providerOptions = {
+    service: props => ajax(`https://example.com/api/v1/user/${props.id}/balance`),
+    mapToProps: money => ({ money }),
+    interval: 1000,
+};
 
 export default provider(providerOptions)(User);
 ```
@@ -37,7 +33,7 @@ export default provider(providerOptions)(User);
 User.jsx
 ``` javascript
 import React, { Component } from 'react';
-import { provider } from 'react-service';
+import { withService } from 'react-service';
 
 function User({ username, money }) {
     return (
@@ -45,14 +41,9 @@ function User({ username, money }) {
     );
 }
 
-function providerOptions(props) {
-    return {
-        service: props.service,
-        interval: 1000,
-        params: {
-            id: props.userId,
-        }
-    }
+const providerOptions = {
+    service: props => props.service(),
+    interval: 1000,
 }
 
 export default provider(providerOptions)(User);

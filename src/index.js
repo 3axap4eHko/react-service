@@ -1,39 +1,37 @@
 import React, { Component as ReactComponent } from 'react';
 
-export function provider(serviceOptions) {
+export function withService(serviceOptions) {
 
   return Component => {
 
-    class ServiceProvider extends ReactComponent {
+    const componentName = Component.displayName || Component.name;
+
+    return class ServiceProvider extends ReactComponent {
+
+      static displayName = `ServiceProvider(${componentName})`;
+      static WrappedComponent = Component;
 
       state = {
-        extraProps: {},
+        props: {},
       };
 
       componentWillMount() {
 
         const {
-                service     = () => {throw new Error('service is not defined in ServiceProvider');},
+                service     = () => {throw new Error(`service is not defined in ${displayName}`);},
+                mapToProps  = () => ({}),
                 interval    = null,
-                params,
                 onSuccess   = () => null,
-                onError     = e => console.error(e),
+                onError     = e => console.error(e) || null,
                 cancelToken = () => {},
-              } = typeof serviceOptions === 'function' ? serviceOptions(this.props) : serviceOptions;
+              } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
 
-        const callback = () => new Promise(resolve => resolve(service(params)))
-          .then(extraProps => {
-            if (extraProps && !this.canceled) {
-              switch(typeof extraProps) {
-                case 'function':
-                  this.setState({ extraProps: extraProps(this.props) });
-                  break;
-                case 'object':
-                  this.setState({ extraProps });
-                  break;
-              }
+        const callback = () => new Promise(resolve => resolve(service(this.props)))
+          .then(result => {
+            if (typeof mapToProps === 'function' && !this.canceled) {
+              this.setState({ props: mapToProps(result) });
             }
-            onSuccess(extraProps);
+            onSuccess(result);
           })
           .catch(onError);
 
@@ -53,14 +51,8 @@ export function provider(serviceOptions) {
       }
 
       render() {
-        const { extraProps } = this.state;
-        return (<Component {...this.props} {...extraProps} />);
+        return (<Component {...this.props} {...this.state.props} />);
       }
-    }
-
-    ServiceProvider.displayName = `ServiceProvider(${Component.displayName || Component.name})`;
-    ServiceProvider.WrappedComponent = Component;
-
-    return ServiceProvider;
+    };
   };
 }
