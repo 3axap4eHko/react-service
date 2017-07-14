@@ -7,21 +7,26 @@
 ## Usage
 
 ### Internally serviced component
-
 User.jsx
 ``` javascript
 import React, { Component } from 'react';
+import { number, string, func } from 'prop-types';
 import { withService } from 'react-service';
 
-function User({ username, money }) {
+function User({ username, balance }) {
     return (
-        <div>{username}: {money}<div/>
+        <div>{username}: {balance}<div/>
     );
 }
 
+User.propTypes = {
+    username: string.isRequired,
+    balance: number.isRequired,
+};
+
 const providerOptions = {
     service: props => ajax(`https://example.com/api/v1/user/${props.id}/balance`),
-    mapToProps: money => ({ money }),
+    mapToProps: balance => ({ balance }),
     interval: 1000,
 };
 
@@ -29,17 +34,23 @@ export default provider(providerOptions)(User);
 ```
 
 ### Externally serviced component
-
 User.jsx
 ``` javascript
 import React, { Component } from 'react';
+import { func } from 'prop-types';
 import { withService } from 'react-service';
 
-function User({ username, money }) {
+function User({ username, balance }) {
     return (
-        <div>{username}: {money}<div/>
+        <div>{username}: {balance}<div/>
     );
 }
+
+User.propTypes = {
+    username: string.isRequired,
+    balance: number.isRequired,
+    service: func.isRequired,
+};
 
 const providerOptions = {
     service: props => props.service(),
@@ -50,21 +61,21 @@ export default provider(providerOptions)(User);
 
 ```
 
-Usage in a simple application
+#### Usage in a simple application
 ``` javascript
 import React, { Component } from 'react';
 import User from './User';
 
 class App extends Component {
-    state = { money: 0 };
+    state = { balance: 0 };
 
     service = ({ id }) => {
         return ajax(`https://example.com/api/v1/user/${id}/balance`)
-            .then(money => this.setState({ money }) );
+            .then(money => this.setState({ balance }) );
     };
 
     render() {
-        return <User money={this.state.money} service={this.service} />
+        return <User balance={this.state.balance} service={this.service} />
     }
 }
 
@@ -72,26 +83,26 @@ export default App;
 
 ```
 
-Usage in a redux application
+#### Usage in a redux application
 ``` javascript
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import User from './User';
-import { loadMoneyAction } from './redux/actions';
+import { loadBalanceAction } from './redux/actions';
 
 class App extends Component {
     render() {
-        const { userMoney, loadMoneyAction } = this.props;
-        return <User money={userMoney} service={loadMoneyAction} />
+        const { balance, loadBalanceAction } = this.props;
+        return <User balance={balance} service={loadBalanceAction} />
     }
 }
 
-function mapStateToProps({ userMoney }) {
-    return { userMoney };
+function mapStateToProps({ balance }) {
+    return { balance };
 }
 
 const mapDispatchToProps = {
-    loadMoneyAction,
+    loadBalanceAction,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(App);
