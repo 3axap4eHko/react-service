@@ -44,11 +44,11 @@
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^2.0.3",
     "mocha": "^3.4.2",
-    "react": "^15.6.1",
-    "react-dom": "^15.6.1",
+    "react": "next",
+    "react-dom": "next",
     "webpack": "^2.6.1"
   },
   "peerDependencies": {
-    "react": "^15.5.0 || ~15.6.0"
+    "react": ">=15.5 || 16"
   }
 }
