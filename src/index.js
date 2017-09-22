@@ -1,4 +1,56 @@
 import React, { Component as ReactComponent } from 'react';
+import { renderToString } from 'react-dom/server';
+import { array, bool } from 'prop-types';
+import traverse from './traverse';
+
+const _service = Symbol;
+const _fetchFlag = Symbol;
+
+function getServices(root, context, skipRoot) {
+  let services = [];
+  traverse(root, context, (element, instance, context) => {
+    if (skipRoot && root === element) {
+      return;
+    }
+    if (instance && instance[_service] instanceof Promise) {
+      services.push({
+        service: instance[_service],
+        element,
+        context,
+      });
+      return false;
+    }
+  });
+  return services;
+}
+
+function recursiveFetch(root, rootContext, skipRoot) {
+  const services = getServices(root, rootContext, skipRoot);
+  if (services.length === 0) {
+    return Promise.resolve();
+  }
+  const errors = [];
+
+  const results = services.map(({ service, element, context }) => service
+    .then(() => recursiveFetch(element, context, true))
+    .catch(e => errors.push(e)),
+  );
+
+  return Promise.all(results)
+    .then(() => {
+      if (errors.length) {
+        console.error(errors[0].stack);
+      }
+    });
+}
+
+export function fetch(root) {
+  return recursiveFetch(root, { [_fetchFlag]: true }, false);
+}
+
+export function render(element) {
+  return fetch(element).then(() => renderToString(element));
+}
 
 export function withService(serviceOptions) {
 
@@ -6,43 +58,43 @@ export function withService(serviceOptions) {
 
     const componentName = Component.displayName || Component.name;
 
-    return class ServiceProvider extends ReactComponent {
+    const {
+            service     = () => {throw new Error(`service is not defined in ${componentName}`);},
+            interval    = null,
+            cancelToken = () => {},
+            onSuccess   = () => null,
+            onError     = e => console.error(e) || null,
+          } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
+
+    const executor = instance => {
+      instance[_service] = Promise.resolve(service(instance.props, instance.state, instance.context))
+        .then(onSuccess)
+        .catch(onError);
+    };
+
+    return class ServiceConnector extends ReactComponent {
 
       static displayName = `ServiceProvider(${componentName})`;
       static WrappedComponent = Component;
 
-      state = {
-        props: {},
+      static contextTypes = {
+        [_fetchFlag]: bool,
       };
 
       componentWillMount() {
+        executor(this);
+      }
 
-        const {
-                service     = () => {throw new Error(`service is not defined in ${displayName}`);},
-                mapToProps  = () => ({}),
-                interval    = null,
-                onSuccess   = () => null,
-                onError     = e => console.error(e) || null,
-                cancelToken = () => {},
-              } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
+      componentDidMount() {
+        if (this.context[_fetchFlag]) {
+          return;
+        }
 
-        const callback = () => new Promise(resolve => resolve(service(this.props)))
-          .then(result => {
-            if (typeof mapToProps === 'function' && !this.canceled) {
-              this.setState({ props: mapToProps(result) });
-            }
-            onSuccess(result);
-          })
-          .catch(onError);
-
-        callback();
-
-        const timerId = interval === null ? 0 : setInterval(callback, interval);
+        const timerId = interval === null ? 0 : setInterval(executor, interval, this);
         this.cancelToken = () => {
           this.canceled = true;
           clearInterval(timerId);
         };
-
         cancelToken(this.cancelToken);
       }
 
@@ -51,7 +103,7 @@ export function withService(serviceOptions) {
       }
 
       render() {
-        return (<Component {...this.props} {...this.state.props} />);
+        return (<Component {...this.props} />);
       }
     };
   };

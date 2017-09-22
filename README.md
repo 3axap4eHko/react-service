@@ -6,107 +6,96 @@
 
 ## Usage
 
-### Internally serviced component
-User.jsx
-``` javascript
-import React, { Component } from 'react';
-import { number, string, func } from 'prop-types';
-import { withService } from 'react-service';
-
-function User({ username, balance }) {
-    return (
-        <div>{username}: {balance}<div/>
-    );
-}
-
-User.propTypes = {
-    username: string.isRequired,
-    balance: number.isRequired,
-};
-
-const providerOptions = {
-    service: props => ajax(`https://example.com/api/v1/user/${props.id}/balance`),
-    mapToProps: balance => ({ balance }),
-    interval: 1000,
-};
-
-export default provider(providerOptions)(User);
-```
-
-### Externally serviced component
-User.jsx
-``` javascript
-import React, { Component } from 'react';
-import { func } from 'prop-types';
-import { withService } from 'react-service';
-
-function User({ username, balance }) {
-    return (
-        <div>{username}: {balance}<div/>
-    );
-}
-
-User.propTypes = {
-    username: string.isRequired,
-    balance: number.isRequired,
-    service: func.isRequired,
-};
-
-const providerOptions = {
-    service: props => props.service(),
-    interval: 1000,
-}
-
-export default provider(providerOptions)(User);
-
-```
-
-#### Usage in a simple application
-``` javascript
-import React, { Component } from 'react';
-import User from './User';
-
-class App extends Component {
-    state = { balance: 0 };
-
-    service = ({ id }) => {
-        return ajax(`https://example.com/api/v1/user/${id}/balance`)
-            .then(money => this.setState({ balance }) );
-    };
-
-    render() {
-        return <User balance={this.state.balance} service={this.service} />
-    }
-}
-
-export default App;
-
-```
-
-#### Usage in a redux application
+A component that represent some async action result
+Value.jsx
 ``` javascript
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import User from './User';
-import { loadBalanceAction } from './redux/actions';
+import { withService } from 'react-service';
+import { getValue } from '../redux/actions'; // async action
 
-class App extends Component {
-    render() {
-        const { balance, loadBalanceAction } = this.props;
-        return <User balance={balance} service={loadBalanceAction} />
-    }
+@connect(({ value }) => ({ value }), { getValue })
+@withService({ service: ({ getValue }) => getValue() })
+export default class Value extends Component {
+  render() {
+    const { value } = this.props;
+    return (
+      <div>{value}</div>
+    );
+  }
 }
+```
 
-function mapStateToProps({ balance }) {
-    return { balance };
+An application component
+App.jsx
+``` javascript
+import React from 'react';
+import Value from './Value';
+
+export default function App() {
+  return (
+    <div>
+      Value: <Value />
+    </div>
+  );
 }
+```
 
-const mapDispatchToProps = {
-    loadBalanceAction,
-};
+Client entry point client.jsx
+``` javascript
+import React from 'react';
+import { Provider } from 'react-redux';
+import { hydrate } from 'react-dom';
+import App from './components/App';
+import createStore from './redux/createStore';
 
-export default connect(mapStateToProps, mapDispatchToProps)(App);
+const store = createStore(window.__INITIAL_STATE__);
 
+hydrate(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.getElementById('app'));
+```
+
+Server entry point server.jsx
+``` javascript
+import React from 'react';
+import Express from 'express';
+import { Provider } from 'react-redux';
+import { render } from 'react-service';
+import createStore from './redux/createStore';
+import App from './components/App';
+
+const app = Express();
+
+app.get('*', async (req, res) => {
+  const store = createStore({ value: 0 });
+
+  const content = await render(
+    <Provider store={store}>
+      <App />
+    </Provider>,
+  );
+
+  res.end(
+    `<!DOCTYPE html>
+<html lang="en">
+<head>
+</head>
+<body>
+<div id="app">${content}</div>
+<!-- Transfer state of store -->
+<script>window.__INITIAL_STATE__ = ${JSON.stringify(store.getState()).replace(/</g, '\\\u003c')}
+</script>
+</body>
+</html>`,
+  );
+});
+
+app.listen(4000, () => {
+  console.log(`Served from http://localhost:4000`); // eslint-disable-line no-console
+});
 ```
 
 ## License

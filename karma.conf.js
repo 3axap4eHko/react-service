@@ -19,7 +19,7 @@ module.exports = function (config) {
     },
     frameworks: ['mocha', 'chai'],
     files: [
-      './test/*.jsx'
+      './test/*-test.jsx'
     ],
     preprocessors: {
       './test/*.jsx': ['webpack', 'sourcemap']
