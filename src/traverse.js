@@ -4,8 +4,8 @@ function isFunction(value) {
   return typeof value === 'function';
 }
 
-function isComponent(component) {
-  return isFunction(component) && component.prototype && component.prototype.isReactComponent;
+function isClassComponent(component) {
+  return isFunction(component) && 'render' in component.prototype;
 }
 
 function renderComponent(Component, props, context) {
@@ -34,7 +34,7 @@ function renderComponent(Component, props, context) {
 }
 
 function getInstance(element, context) {
-  if (isComponent(element.type)) {
+  if (isClassComponent(element.type)) {
     const props = { ...element.type.defaultProps, ...element.props };
     return renderComponent(element.type, props, context);
   } else {

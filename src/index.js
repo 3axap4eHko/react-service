@@ -1,6 +1,5 @@
 import React, { Component as ReactComponent } from 'react';
-import { renderToString } from 'react-dom/server';
-import { array, bool } from 'prop-types';
+import { array, bool, object } from 'prop-types';
 import traverse from './traverse';
 
 const _service = Symbol;
@@ -48,10 +47,6 @@ export function fetch(root) {
   return recursiveFetch(root, { [_fetchFlag]: true }, false);
 }
 
-export function render(element) {
-  return fetch(element).then(() => renderToString(element));
-}
-
 export function withService(serviceOptions) {
 
   return Component => {
@@ -61,13 +56,14 @@ export function withService(serviceOptions) {
     const {
             service     = () => {throw new Error(`service is not defined in ${componentName}`);},
             interval    = null,
+            contextTypes = {},
             cancelToken = () => {},
             onSuccess   = () => null,
             onError     = e => console.error(e) || null,
           } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
 
-    const executor = instance => {
-      instance[_service] = Promise.resolve(service(instance.props, instance.state, instance.context))
+    const executor = (instance, props) => {
+      instance[_service] = Promise.resolve(service(props, instance.context))
         .then(onSuccess)
         .catch(onError);
     };
@@ -79,10 +75,11 @@ export function withService(serviceOptions) {
 
       static contextTypes = {
         [_fetchFlag]: bool,
+        ...contextTypes,
       };
 
       componentWillMount() {
-        executor(this);
+        executor(this, this.props);
       }
 
       componentDidMount() {
@@ -90,12 +87,16 @@ export function withService(serviceOptions) {
           return;
         }
 
-        const timerId = interval === null ? 0 : setInterval(executor, interval, this);
+        const timerId = interval === null ? 0 : setInterval(executor, interval, this, this.props);
         this.cancelToken = () => {
           this.canceled = true;
           clearInterval(timerId);
         };
         cancelToken(this.cancelToken);
+      }
+
+      componentWillReceiveProps(nextProps) {
+        executor(this, nextProps);
       }
 
       componentWillUnmount() {

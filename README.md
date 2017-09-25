@@ -10,12 +10,18 @@ A component that represent some async action result
 Value.jsx
 ``` javascript
 import React, { Component } from 'react';
+import { object } from 'prop-types';
 import { connect } from 'react-redux';
 import { withService } from 'react-service';
 import { getValue } from '../redux/actions'; // async action
 
-@connect(({ value }) => ({ value }), { getValue })
-@withService({ service: ({ getValue }) => getValue() })
+@withService({ 
+  contextTypes: {
+      store: object,
+  },
+  service: ({ id }, { store }) => store.dispatch(getValue(id)), 
+})
+@connect(({ value }) => ({ value }))
 export default class Value extends Component {
   render() {
     const { value } = this.props;
@@ -35,7 +41,7 @@ import Value from './Value';
 export default function App() {
   return (
     <div>
-      Value: <Value />
+      Value: <Value id={21} />
     </div>
   );
 }

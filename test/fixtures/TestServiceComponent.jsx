@@ -1,14 +1,18 @@
 import React, { Component } from 'react';
+import { object } from 'prop-types';
 import { connect } from 'react-redux';
 import { withService } from '../../src/index';
 import { getValue } from '../redux/actions';
 
 const serviceOptions = {
-  service: ({ getValue }) => getValue(),
+  contextTypes: {
+    store: object,
+  },
+  service: ({}, { store }) => store.dispatch(getValue()),
 };
 
-@connect(({ value }) => ({ value }), { getValue })
 @withService(serviceOptions)
+@connect(({ value }) => ({ value }))
 export default class TestServiceComponent extends Component {
 
   render() {
