@@ -34,14 +34,14 @@ function renderComponent(Component, props, context) {
 }
 
 function getInstance(element, context) {
+  const props = { ...(element.type || {}).defaultProps, ...element.props };
   if (isClassComponent(element.type)) {
-    const props = { ...element.type.defaultProps, ...element.props };
     return renderComponent(element.type, props, context);
   } else {
     return {
       instance: null,
       childContext: context,
-      props: {},
+      props,
     };
   }
 }
