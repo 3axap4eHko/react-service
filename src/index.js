@@ -54,12 +54,12 @@ export function withService(serviceOptions) {
     const componentName = Component.displayName || Component.name;
 
     const {
-            service     = () => {throw new Error(`service is not defined in ${componentName}`);},
-            interval    = null,
+            service      = () => {throw new Error(`service is not defined in ${componentName}`);},
+            interval     = null,
             contextTypes = {},
-            cancelToken = () => {},
-            onSuccess   = () => null,
-            onError     = e => console.error(e) || null,
+            cancelToken  = () => {},
+            onSuccess    = () => null,
+            onError      = e => console.error(e) || null,
           } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
 
     const executor = (instance, props) => {
@@ -104,7 +104,7 @@ export function withService(serviceOptions) {
       }
 
       render() {
-        return (<Component {...this.props} />);
+        return (<Component {...this.props} ref={component => this.component = component} />);
       }
     };
   };

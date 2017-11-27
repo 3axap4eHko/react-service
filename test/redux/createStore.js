@@ -12,7 +12,7 @@ export default function (initialState) {
     initialState,
     applyMiddleware(
       thunkMiddleware,
-      loggerMiddleware,
+//      loggerMiddleware,
     ),
   );
 }

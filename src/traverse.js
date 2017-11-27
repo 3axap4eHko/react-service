@@ -12,12 +12,13 @@ function renderComponent(Component, props, context) {
   const instance = new Component(props, context);
   instance.props = instance.props || props;
   instance.context = instance.context || context;
+  instance.state = instance.state || null;
 
   instance.setState = (updater, callback) => {
     if (typeof updater === 'function') {
-      instance.state = { ...instance.state, ...updater(instance.state, instance.props) };
+      instance.state = { ...instance.state, ...updater(instance.state, instance.props, instance.context) };
     } else {
-      instance.state = { ...instance.state, ...updater(instance.state, instance.props) };
+      instance.state = { ...instance.state, ...updater };
     }
 
     callback();
