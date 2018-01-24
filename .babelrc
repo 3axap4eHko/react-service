@@ -2,14 +2,21 @@
   "presets": [
     ["env", {
       "targets": {
-        "browsers": ["last 2 version"]
+        "browsers": ["last 2 version"],
+        "node": 8
       }
     }],
     "react"
   ],
   "plugins": [
-    "transform-decorators-legacy",
     "transform-object-rest-spread",
     "transform-class-properties"
-  ]
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        "transform-decorators-legacy"
+      ]
+    }
+  }
 }

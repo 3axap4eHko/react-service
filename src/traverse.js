@@ -1,11 +1,15 @@
-import React, { Children } from 'react';
+import { Children } from 'react';
 
 function isFunction(value) {
   return typeof value === 'function';
 }
 
-function isClassComponent(component) {
-  return isFunction(component) && 'render' in component.prototype;
+function isClassComponent(Component) {
+  return Component && Component.prototype && Component.prototype.render;
+}
+
+export function getName(element) {
+  return element.type ? (element.type.name ? element.type.name : element.type) : element;
 }
 
 function renderComponent(Component, props, context) {
@@ -14,14 +18,15 @@ function renderComponent(Component, props, context) {
   instance.context = instance.context || context;
   instance.state = instance.state || null;
 
-  instance.setState = (updater, callback) => {
+  instance.setState = function (updater, callback) {
     if (typeof updater === 'function') {
       instance.state = { ...instance.state, ...updater(instance.state, instance.props, instance.context) };
     } else {
       instance.state = { ...instance.state, ...updater };
     }
-
-    callback();
+    if (typeof callback === 'function') {
+      callback();
+    }
   };
   if (instance.componentWillMount) {
     instance.componentWillMount();

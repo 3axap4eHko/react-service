@@ -1,9 +1,24 @@
 import React, { Component as ReactComponent } from 'react';
-import { array, bool, object } from 'prop-types';
 import traverse from './traverse';
 
-const _service = Symbol;
-const _fetchFlag = Symbol;
+const SERVICE_FN = 'callService';
+
+function randNumber(min, max) {
+  return min + Math.round(Math.random() * (max - min));
+}
+
+const s = {
+  get a() {
+    return randNumber(0x1000, 0x1FFF).toString(16);
+  },
+  get b() {
+    return `0000${Date.now().toString(16)}`.slice(-12);
+  },
+};
+
+function uuid() {
+  return `${s.a}${s.a}-${s.a}-${s.a}-${s.a}-${s.b}`;
+}
 
 function getServices(root, context, skipRoot) {
   let services = [];
@@ -11,27 +26,27 @@ function getServices(root, context, skipRoot) {
     if (skipRoot && root === element) {
       return;
     }
-    if (instance && instance[_service] instanceof Promise) {
+    if (instance && typeof instance[SERVICE_FN] === 'function') {
       services.push({
-        service: instance[_service],
+        service: instance[SERVICE_FN](),
         element,
         context,
       });
       return false;
     }
   });
+
   return services;
 }
 
-function recursiveFetch(root, rootContext, skipRoot) {
+function recursiveTraverse(root, rootContext, skipRoot) {
   const services = getServices(root, rootContext, skipRoot);
   if (services.length === 0) {
     return Promise.resolve();
   }
   const errors = [];
-
   const results = services.map(({ service, element, context }) => service
-    .then(() => recursiveFetch(element, context, true))
+    .then(() => recursiveTraverse(element, context, true))
     .catch(e => errors.push(e)),
   );
 
@@ -43,68 +58,92 @@ function recursiveFetch(root, rootContext, skipRoot) {
     });
 }
 
-export function fetch(root) {
-  return recursiveFetch(root, { [_fetchFlag]: true }, false);
+export function fetchServices(root) {
+  return recursiveTraverse(root, {}, false);
 }
 
 export function withService(serviceOptions) {
 
+  const serviceContext = {
+    fetched: false,
+    initialized: false,
+    serviceID: uuid(),
+  };
+
   return Component => {
+
+    if (serviceContext.initialized) {
+      throw new Error(`withService can be used once per component`);
+    }
+    serviceContext.initialized = true;
 
     const componentName = Component.displayName || Component.name;
 
     const {
-            service      = () => {throw new Error(`service is not defined in ${componentName}`);},
-            interval     = null,
-            contextTypes = {},
-            cancelToken  = () => {},
+            onCall       = () => {throw new Error(`onCall is not defined in ${componentName}`);},
             onSuccess    = () => null,
             onError      = e => console.error(e) || null,
-          } = typeof serviceOptions === 'function' ? { service: serviceOptions } : (serviceOptions || {});
-
-    const executor = (instance, props) => {
-      instance[_service] = Promise.resolve(service(props, instance.context))
-        .then(onSuccess)
-        .catch(onError);
-    };
+            interval     = null,
+            contextTypes = {},
+          } = serviceOptions || {};
 
     return class ServiceConnector extends ReactComponent {
 
-      static displayName = `ServiceProvider(${componentName})`;
+      static displayName = `ServiceConnector(${componentName})`;
       static WrappedComponent = Component;
 
       static contextTypes = {
-        [_fetchFlag]: bool,
         ...contextTypes,
       };
 
+      cancel = () => {};
+      unmounted = false;
+
+      [SERVICE_FN] = async () => {
+        try {
+          this.cancel();
+          let canceled = false;
+          this.cancel = () => canceled = true;
+          const result = await onCall(this.props, this.context);
+          if (canceled || this.unmounted) {
+            return;
+          }
+          serviceContext.fetched = true;
+          await onSuccess(result, serviceContext.serviceID, this.props, this.context);
+        } catch (e) {
+          console.error(e);
+          onError(this.props, this.context);
+        }
+      };
+
+      callServiceInterval = async doCall => {
+        if (interval !== null && !this.unmounted) {
+          if (doCall) {
+            await this[SERVICE_FN](this.props);
+          }
+          setTimeout(this.callServiceInterval, interval, true);
+        }
+      };
+
       componentWillMount() {
-        executor(this, this.props);
+        if (!serviceContext.fetched) {
+          this[SERVICE_FN](this.props);
+        }
       }
 
       componentDidMount() {
-        if (this.context[_fetchFlag]) {
-          return;
-        }
-
-        const timerId = interval === null ? 0 : setInterval(executor, interval, this, this.props);
-        this.cancelToken = () => {
-          this.canceled = true;
-          clearInterval(timerId);
-        };
-        cancelToken(this.cancelToken);
-      }
-
-      componentWillReceiveProps(nextProps) {
-        executor(this, nextProps);
+        this.callServiceInterval();
       }
 
       componentWillUnmount() {
-        this.cancelToken();
+        this.unmounted = true;
       }
 
       render() {
-        return (<Component {...this.props} ref={component => this.component = component} />);
+        if (!serviceContext.fetched) {
+          return null;
+        }
+        return (<Component {...this.props} serviceID={serviceContext.serviceID} />);
       }
     };
   };
