@@ -3,6 +3,10 @@ import traverse from './traverse';
 
 const SERVICE_FN = 'callService';
 
+const options = {
+  SSR: false,
+};
+
 function randNumber(min, max) {
   return min + Math.round(Math.random() * (max - min));
 }
@@ -56,6 +60,10 @@ function recursiveTraverse(root, rootContext, skipRoot) {
         console.error(errors[0].stack);
       }
     });
+}
+
+export function setOptions(customOptions) {
+  Object.assign(options, customOptions);
 }
 
 export function fetchServices(root) {
@@ -126,7 +134,7 @@ export function withService(serviceOptions) {
       };
 
       componentWillMount() {
-        if (!serviceContext.fetched) {
+        if (!options.SSR) {
           this[SERVICE_FN](this.props);
         }
       }

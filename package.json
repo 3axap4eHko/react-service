@@ -2,9 +2,9 @@
   "name": "react-service",
   "version": "3.1.0",
   "description": "React Service Component",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "build": "rm -rf *.js && babel src --out-dir lib --ignore __tests__",
+    "build": "rm -rf lib && babel src --out-dir lib --ignore __tests__",
     "test": "NODE_ENV=test jest",
     "patch-release": "npm version patch && gulp && git push && git push --tags && cd build && npm publish"
   },
@@ -31,22 +31,14 @@
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-react": "^6.24.1",
-    "del": "^3.0.0",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
     "jest": "^22.1.4",
     "react": "^16.2.0",
-    "react-dom": "^16.2.0",
-    "react-redux": "^5.0.6",
-    "react-test-renderer": "^16.2.0",
-    "redux": "^3.7.2",
-    "redux-logger": "^3.0.6",
-    "redux-thunk": "^2.2.0",
-    "webpack": "^3.8.1"
+    "react-test-renderer": "^16.2.0"
   },
   "peerDependencies": {
-    "react": ">=16",
-    "react-dom": "16>="
+    "react": ">=16"
   },
   "dependencies": {
     "prop-types": "^15.6.0"
