@@ -3,10 +3,6 @@ import traverse from './traverse';
 
 const SERVICE_FN = 'callService';
 
-const options = {
-  SSR: false,
-};
-
 function randNumber(min, max) {
   return min + Math.round(Math.random() * (max - min));
 }
@@ -62,10 +58,6 @@ function recursiveTraverse(root, rootContext, skipRoot) {
     });
 }
 
-export function setOptions(customOptions) {
-  Object.assign(options, customOptions);
-}
-
 export function fetchServices(root) {
   return recursiveTraverse(root, {}, false);
 }
@@ -73,7 +65,6 @@ export function fetchServices(root) {
 export function withService(serviceOptions) {
 
   const serviceContext = {
-    fetched: false,
     initialized: false,
     serviceID: uuid(),
   };
@@ -111,12 +102,12 @@ export function withService(serviceOptions) {
         this.cancel();
         let canceled = false;
         this.cancel = () => canceled = true;
+
         return Promise.resolve(onCall(this.props, this.context))
           .then(result => {
             if (canceled || this.unmounted) {
               return;
             }
-            serviceContext.fetched = true;
             return onSuccess(result, serviceContext.serviceID, this.props, this.context);
           })
           .catch(error => {
@@ -132,12 +123,6 @@ export function withService(serviceOptions) {
         }
       };
 
-      componentWillMount() {
-        if (!options.SSR) {
-          this[SERVICE_FN](this.props);
-        }
-      }
-
       componentDidMount() {
         this.callServiceInterval();
       }
@@ -147,10 +132,7 @@ export function withService(serviceOptions) {
       }
 
       render() {
-        if (!serviceContext.fetched) {
-          return null;
-        }
-        return (<Component {...this.props} serviceID={serviceContext.serviceID} />);
+        return (<Component {...this.props} serviceID={serviceContext.serviceID} serviceCall={this[SERVICE_FN]} />);
       }
     };
   };
