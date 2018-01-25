@@ -107,29 +107,28 @@ export function withService(serviceOptions) {
       cancel = () => {};
       unmounted = false;
 
-      [SERVICE_FN] = async () => {
-        try {
-          this.cancel();
-          let canceled = false;
-          this.cancel = () => canceled = true;
-          const result = await onCall(this.props, this.context);
-          if (canceled || this.unmounted) {
-            return;
-          }
-          serviceContext.fetched = true;
-          await onSuccess(result, serviceContext.serviceID, this.props, this.context);
-        } catch (e) {
-          console.error(e);
-          onError(this.props, this.context);
-        }
+      [SERVICE_FN] = () => {
+        this.cancel();
+        let canceled = false;
+        this.cancel = () => canceled = true;
+        return Promise.resolve(onCall(this.props, this.context))
+          .then(result => {
+            if (canceled || this.unmounted) {
+              return;
+            }
+            serviceContext.fetched = true;
+            return onSuccess(result, serviceContext.serviceID, this.props, this.context);
+          })
+          .catch(error => {
+            console.error(error);
+            return onError(this.props, this.context);
+          });
       };
 
-      callServiceInterval = async doCall => {
+      callServiceInterval = doCall => {
         if (interval !== null && !this.unmounted) {
-          if (doCall) {
-            await this[SERVICE_FN](this.props);
-          }
-          setTimeout(this.callServiceInterval, interval, true);
+          Promise.resolve(doCall ? this[SERVICE_FN](this.props) : null)
+            .then(() => setTimeout(this.callServiceInterval, interval, true));
         }
       };
 
