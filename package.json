@@ -5,8 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "rm -rf lib && babel src --out-dir lib --ignore __tests__",
-    "test": "NODE_ENV=test jest",
-    "patch-release": "npm version patch && gulp && git push && git push --tags && cd build && npm publish"
+    "test": "NODE_ENV=test jest"
   },
   "repository": {
     "type": "git",
