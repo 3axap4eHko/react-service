@@ -2,45 +2,38 @@ import React, { Component, Children } from 'react';
 import renderer from 'react-test-renderer';
 import { shallow, configure, render } from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
-import { fetchServices, withService } from '../index';
+import withService, { fetchServices, importData } from '../index';
 
 configure({ adapter: new Adapter() });
 
-const store = {
-  test: null,
-};
+beforeEach(() => {
 
-const service = {
-  onCall() {
-    return new Promise(r => setInterval(r, 1000, 1));
-  },
-  onSuccess(result, props) {
-    store['test'] = result;
-  },
-  onError(result, props) {
+});
 
-  },
-};
+test('withService HOC test', async () => {
+  const counters = {
+    service: 0,
+    render: 0,
+  };
 
-@withService(service)
-class ServiceTest extends Component {
-  render() {
-    return (
-      <div>
-        {store['test']}
-      </div>
-    );
+  const service = () => ++counters.service && new Promise(r => setInterval(r, 1000, 'test'));
+
+  @withService(service)
+  class Data extends Component {
+    render() {
+      counters.render++;
+      return <div>{JSON.stringify(this.props.data)}</div>;
+    }
   }
-}
 
-test('traverse class', async () => {
+  const app = (<Data />);
 
-  const app = (
-    <ServiceTest />
-  );
-
-  await fetchServices(app);
+  const cache = await fetchServices(app);
+  expect(counters.render).toBe(1);
+  importData(cache);
   const component = renderer.create(app);
-
-  expect(component.toJSON().children[0]).toBe('1');
+  expect(component.toJSON()).toMatchSnapshot();
+  expect(counters.service).toBe(1);
+  expect(counters.render).toBe(2);
+  expect(Data.displayName).toBe('ServiceConnector-0-service(Data)');
 });

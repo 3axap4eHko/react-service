@@ -1,6 +1,10 @@
 import React, { Component } from 'react';
 import traverse from '../traverse';
 
+function ChildAsAFunction({ children }) {
+  return children();
+}
+
 class TraverseTest extends Component {
   render() {
     return (
@@ -10,7 +14,9 @@ class TraverseTest extends Component {
         <li>item 3</li>
         <li>item 4</li>
         <li>item 5</li>
-        <li>item 6</li>
+        <ChildAsAFunction>
+          {() => <li>item 6</li>}
+        </ChildAsAFunction>
       </ul>
     );
   }
@@ -24,7 +30,9 @@ function TraverseStatelessTest() {
       <li>item 3</li>
       <li>item 4</li>
       <li>item 5</li>
-      <li>item 6</li>
+      <ChildAsAFunction>
+        {() => <li>item 6</li>}
+      </ChildAsAFunction>
     </ul>
   );
 }
@@ -37,25 +45,31 @@ function TraverseWrapperTest() {
   );
 }
 
-test('traverse class', done => {
-  const context = {
-    components: 0,
-  };
+test('traverse class', () => {
   const root = (<TraverseTest />);
 
-  traverse(root, context, (element, instance, context) => {
-    context.components++;
+  const tags = {
+    root: 0,
+    ul: 0,
+    li: 0,
+  };
+
+  traverse(root, {}, (element) => {
     if (element.type === TraverseTest) {
+      tags.root++;
       expect(element.props).toMatchObject({});
     } else if (element.type === 'ul') {
+      tags.ul++;
       expect(element.props.children.length).toBe(6);
     } else if (element.type === 'li') {
+      tags.li++;
       expect(element.props.children).toMatch(/item \d/);
     }
-    if (context.components === 8) {
-      done();
-    }
   });
+
+  expect(tags.root).toEqual(1);
+  expect(tags.ul).toEqual(1);
+  expect(tags.li).toEqual(6);
 });
 
 test('traverse function', done => {
@@ -79,14 +93,14 @@ test('traverse function', done => {
   });
 });
 
-test('traverse function', done => {
+test('traverse wrapped', done => {
   const root = (
     <span>
       <TraverseWrapperTest />
     </span>
   );
 
-  const elements = ['span', 'TraverseWrapperTest', 'div', 'TraverseStatelessTest', 'ul', 'li', 'li', 'li', 'li', 'li', 'li', 'item 1', 'item 2', 'item 3', 'item 4', 'item 5', 'item 6'];
+  const elements = ['span', 'TraverseWrapperTest', 'div', 'TraverseStatelessTest', 'ul', 'li', 'li', 'li', 'li', 'li', 'li', 'item 1', 'item 2', 'item 3', 'item 4', 'item 5', 'item 6', 'ChildAsAFunction'];
 
   traverse(root, {}, (element, instance, context) => {
     const name = element.type ? (element.type.name ? element.type.name : element.type) : element;

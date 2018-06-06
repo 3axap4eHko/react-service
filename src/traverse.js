@@ -18,6 +18,13 @@ function renderComponent(Component, props, context) {
   instance.context = instance.context || context;
   instance.state = instance.state || null;
 
+  if (Component.getDerivedStateFromProps) {
+    const state = Component.getDerivedStateFromProps(instance.props, instance.state);
+    if (state !== null) {
+      instance.state = state;
+    }
+  }
+
   instance.setState = function (updater, callback) {
     if (typeof updater === 'function') {
       instance.state = { ...instance.state, ...updater(instance.state, instance.props, instance.context) };
@@ -28,7 +35,9 @@ function renderComponent(Component, props, context) {
       callback();
     }
   };
+
   if (instance.componentWillMount) {
+    console.warn(`support componentWillMount is deprecated`);
     instance.componentWillMount();
   }
   const childContext = instance.getChildContext ? { ...context, ...instance.getChildContext() } : { ...context };

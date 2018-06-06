@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`withService HOC test 1`] = `
+<div>
+  {"result":"test","loading":false,"error":null}
+</div>
+`;

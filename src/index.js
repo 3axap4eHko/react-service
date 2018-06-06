@@ -1,139 +1,155 @@
-import React, { Component as ReactComponent } from 'react';
-import traverse from './traverse';
+import React, { Component } from 'react';
+import { any, func, object, string } from 'prop-types';
+import traverseElement from './traverse';
+import { createPool, getHash } from './utils';
 
-const SERVICE_FN = 'callService';
-
-function randNumber(min, max) {
-  return min + Math.round(Math.random() * (max - min));
-}
-
-const s = {
-  get a() {
-    return randNumber(0x1000, 0x1FFF).toString(16);
-  },
-  get b() {
-    return `0000${Date.now().toString(16)}`.slice(-12);
-  },
-};
-
-function uuid() {
-  return `${s.a}${s.a}-${s.a}-${s.a}-${s.a}-${s.b}`;
-}
+const IS_BROWSER = (function () { try {return this === window;} catch (e) { return false;} })();
 
 function getServices(root, context, skipRoot) {
   let services = [];
-  traverse(root, context, (element, instance, context) => {
+  traverseElement(root, context, (element, instance, context) => {
     if (skipRoot && root === element) {
       return;
     }
-    if (instance && typeof instance[SERVICE_FN] === 'function') {
+    if (instance && typeof instance.fetchService === 'function') {
       services.push({
-        service: instance[SERVICE_FN](),
+        service: instance.fetchService,
         element,
         context,
       });
       return false;
     }
   });
-
   return services;
 }
 
-function recursiveTraverse(root, rootContext, skipRoot) {
-  const services = getServices(root, rootContext, skipRoot);
-  if (services.length === 0) {
-    return Promise.resolve();
+function mapServiceToElement({ element, context }) {
+  return { element, context, skipRoot: true };
+}
+
+async function traverse(elementPool, data) {
+  const { element, context, skipRoot } = elementPool.value;
+  const services = getServices(element, context, skipRoot);
+  if (services.length !== 0) {
+    elementPool.push(...services.map(mapServiceToElement));
+    await Promise.all(services.map(({ service }) => service(data, null)));
   }
-  const errors = [];
-  const results = services.map(({ service, element, context }) => service
-    .then(() => recursiveTraverse(element, context, true))
-    .catch(e => errors.push(e)),
-  );
-
-  return Promise.all(results)
-    .then(() => {
-      if (errors.length) {
-        console.error(errors[0].stack);
-      }
-    });
 }
 
-export function fetchServices(root) {
-  return recursiveTraverse(root, {}, false);
+export async function fetchServices(element) {
+  const data = {};
+  const elementPool = createPool({ element, context: {}, skipRoot: false });
+  while (!elementPool.done) {
+    await traverse(elementPool, data);
+    elementPool.next();
+  }
+  return data;
 }
 
-export function withService(serviceOptions) {
+let counter = 0;
 
-  const serviceContext = {
-    initialized: false,
-    serviceID: uuid(),
+class Service extends Component {
+  static data = {};
+  static propTypes = {
+    name: string.isRequired,
+    service: func.isRequired,
+    children: func.isRequired,
+    params: object,
+    force: any,
   };
 
-  return Component => {
+  static defaultProps = {
+    force: null,
+  };
 
-    if (serviceContext.initialized) {
-      throw new Error(`withService can be used once per component`);
+  static getDerivedStateFromProps(props) {
+    const hashId = getHash(props);
+    if (hashId in Service.data) {
+      return { hashId, result: Service.data[hashId], loading: false, error: null };
     }
-    serviceContext.initialized = true;
+    return null;
+  }
 
-    const componentName = Component.displayName || Component.name;
+  state = {};
+  unmounted = false;
 
-    const {
-            onCall       = () => {throw new Error(`onCall is not defined in ${componentName}`);},
-            onSuccess    = () => null,
-            onError      = e => console.error(e) || null,
-            interval     = null,
-            contextTypes = {},
-          } = serviceOptions || {};
+  setStateAsync = state => {
+    if (!this.unmounted) {
+      return new Promise(r => this.setState(state, r));
+    }
+  };
 
-    return class ServiceConnector extends ReactComponent {
-
-      static displayName = `ServiceConnector(${componentName})`;
-      static WrappedComponent = Component;
-
-      static contextTypes = {
-        ...contextTypes,
-      };
-
-      cancel = () => {};
-      unmounted = false;
-
-      [SERVICE_FN] = () => {
-        this.cancel();
-        let canceled = false;
-        this.cancel = () => canceled = true;
-
-        return Promise.resolve(onCall(this.props, this.context))
-          .then(result => {
-            if (canceled || this.unmounted) {
-              return;
-            }
-            return onSuccess(result, serviceContext.serviceID, this.props, this.context);
-          })
-          .catch(error => {
-            console.error(error);
-            return onError(this.props, this.context);
-          });
-      };
-
-      callServiceInterval = doCall => {
-        if (interval !== null && !this.unmounted) {
-          Promise.resolve(doCall ? this[SERVICE_FN](this.props) : null)
-            .then(() => setTimeout(this.callServiceInterval, interval, true));
-        }
-      };
-
-      componentDidMount() {
-        this.callServiceInterval();
+  fetchService = async (data, prevForce) => {
+    const { name, service, params, force } = this.props;
+    const hashId = getHash(this.props);
+    if (this.state.hashId !== hashId || prevForce !== force) {
+      await this.setStateAsync({ loading: true });
+      try {
+        const result = await service(params, name, hashId);
+        data[hashId] = result;
+        await this.setStateAsync({ hashId, result, loading: false, error: null });
+      } catch (error) {
+        await this.setStateAsync({ hashId, result: null, loading: false, error });
       }
+    }
+  };
 
-      componentWillUnmount() {
-        this.unmounted = true;
-      }
+  componentDidMount() {
+    this.fetchService(Service.data, this.props.force);
+  }
+
+  componentDidUpdate(prevProps) {
+    this.fetchService(Service.data, prevProps.force);
+  }
+
+  componentWillUnmount() {
+    this.unmounted = true;
+  }
+
+  render() {
+    const { children } = this.props;
+    const { hashId, ...data } = this.state;
+
+    return children(data, hashId);
+  }
+}
+
+export default function withService(service, options) {
+  const { mapParams = () => ({}) } = options || {};
+
+  const index = counter++;
+  const name = `${index}-service`;
+
+  return WrappedComponent => {
+
+    const componentName = WrappedComponent.displayName || WrappedComponent.name;
+
+    return class ServiceConnector extends Component {
+
+      static displayName = `ServiceConnector-${name}(${componentName})`;
+      static WrappedComponent = WrappedComponent;
 
       render() {
-        return (<Component {...this.props} serviceID={serviceContext.serviceID} serviceCall={this[SERVICE_FN]} />);
+        const params = mapParams(this.props, name);
+
+        return (
+          <Service name={name} service={service} params={params}>
+            {data => <WrappedComponent {...this.props} data={data} />}
+          </Service>
+        );
       }
     };
   };
 }
+
+export function exportData(data) {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
+export function importData(data) {
+  if (!IS_BROWSER) {
+    console.warn('importData recommended client-side only');
+  }
+  Service.data = data;
+}
+
