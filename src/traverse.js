@@ -1,7 +1,15 @@
-import { Children } from 'react';
+import React, { Children } from 'react';
 
 function isFunction(value) {
   return typeof value === 'function';
+}
+
+function isProvider(element) {
+  return element && element.$$typeof === Symbol.for('react.provider');
+}
+
+function isConsumer(element) {
+  return element && element.$$typeof === Symbol.for('react.context');
 }
 
 function isClassComponent(Component) {
@@ -48,10 +56,36 @@ function renderComponent(Component, props, context) {
   };
 }
 
+function renderProvider(element, props, context) {
+  const { value } = props;
+  element._currentValue = value;
+  return {
+    instance: null,
+    childContext: context,
+    props: props,
+  };
+}
+
+function renderConsumer(element, props, context) {
+  return {
+    instance: {
+      render() {
+        return props.children(element._context.Provider._currentValue);
+      },
+    },
+    childContext: context,
+    props: props,
+  };
+}
+
 function getInstance(element, context) {
   const props = { ...(element.type || {}).defaultProps, ...element.props };
   if (isClassComponent(element.type)) {
     return renderComponent(element.type, props, context);
+  } else if (isProvider(element.type)) {
+    return renderProvider(element.type, props, context);
+  } else if (isConsumer(element.type)) {
+    return renderConsumer(element.type, props, context);
   } else {
     return {
       instance: null,

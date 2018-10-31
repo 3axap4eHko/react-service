@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, createContext } from 'react';
 import traverse from '../traverse';
 
 function ChildAsAFunction({ children }) {
@@ -42,6 +42,16 @@ function TraverseWrapperTest() {
     <div>
       <TraverseStatelessTest />
     </div>
+  );
+}
+
+const Context = createContext({});
+
+function TraverseContextTest() {
+  return (
+    <Context.Consumer>
+      {value => <div>{value.a}</div>}
+    </Context.Consumer>
   );
 }
 
@@ -118,4 +128,22 @@ test('traverse wrapped', done => {
       done();
     }
   });
+});
+
+test('traverse context', done => {
+
+  const root = (
+    <Context.Provider value={{ a: 1 }}>
+      <Context.Consumer>
+        {value => <div>{value.a}</div>}
+      </Context.Consumer>
+    </Context.Provider>
+  );
+
+  let counter = 0;
+  traverse(root, {}, (element, instance, context) => {
+    counter++;
+  });
+  expect(counter).toBe(4);
+  done();
 });
