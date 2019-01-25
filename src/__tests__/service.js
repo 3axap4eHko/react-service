@@ -1,10 +1,8 @@
 import React, { Component, Children } from 'react';
 import renderer from 'react-test-renderer';
-import { shallow, configure, render } from 'enzyme';
-import Adapter from 'enzyme-adapter-react-16';
+import { shallow, render } from 'enzyme';
 import withService, { fetchServices, importData } from '../index';
 
-configure({ adapter: new Adapter() });
 
 beforeEach(() => {
 
